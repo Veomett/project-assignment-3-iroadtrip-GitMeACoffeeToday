@@ -15,7 +15,80 @@ public class IRoadTrip {
 
 
     public List<String> findPath (String country1, String country2) {
-        // Replace with your code
+        // First put source country ID into visited states as we start off with it.
+        // Then from the source country, we put the ids of all of its neighbooring states into the unvisited (bordersList).
+            // Of the unvisited states, we choose the one with the shortest border distance and move it into the visited. (Create a new Route and place it into the route list).
+        
+        ArrayList<Integer> visitedStatesId = new ArrayList<Integer>();
+        ArrayList<Integer> unvisitedStatesId = new ArrayList<Integer>();
+        
+        ArrayList<Route> routes = new ArrayList<Route>();
+        
+        int smallestBorderDist = -1;
+        int smallestCountryId;
+        
+        int currrentCountryId = graph.getStateHash(graph.getStateHashId(country1)).getId();
+        int destinationCountryId = graph.getStateHash(graph.getStateHashId(country2)).getId();
+        
+        visitedStatesId.add(currrentCountryId);
+        
+        for(int i = 0; i < graph.getStateHash(graph.getStateHashId(country1)).getBorderSize(); i++) { // Adds all bordering states to the unvisited.
+            unvisitedStatesId.add(graph.getStateHash(graph.getStateHashId(country1)).getBorderState(i).getState().getId());
+        }
+        routes.add(new Route(-1, currrentCountryId, 0)); // First source state from itself to itself. Has no previous state. Distance 0.
+        
+        
+        // Either the unvisited states id list is empty or the next new route ends with the destination.
+        while(!unvisitedStatesId.isEmpty()) { // While there are adjacent states to check...
+            smallestBorderDist = -1;
+            smallestCountryId = -1;
+            
+            for(int i = 0; i < unvisitedStatesId.size(); i++) { // From the list of unvisitedStates, i.e. bordering states...
+                
+                if(!visitedStatesId.contains(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId())) { // If the border hasn't been visited already...
+                    // We only consider the adjancent states that have not been visited yet...
+                    if(smallestBorderDist == -1) { // Base case, we have no data yet.
+                        smallestBorderDist = graph.getStateHash(currrentCountryId).getBorderState(i).getDistance();
+                        smallestCountryId = graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId();
+                    }
+                    else {
+                        if(smallestBorderDist > graph.getStateHash(currrentCountryId).getBorderState(i).getDistance()) {
+                            smallestBorderDist = graph.getStateHash(currrentCountryId).getBorderState(i).getDistance();
+                            smallestCountryId = graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId();
+                        }
+                    }
+                }
+                /*
+                else { // Remove the state id from the unvisitedStatesId..
+                    unvisitedStatesId.remove(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId()); // We have visited the countryId so now we remove it from unvisited.
+                    
+                    // We start the loop over, save for the change that the loop is now one adjacent state shorter.
+                    smallestBorderDist = -1;
+                    smallestCountryId = -1;
+                    i = 0; // reset i to 0.
+                }*/
+            }
+            
+            if(smallestBorderDist != -1) { // If the shortest and unvisited border has been found...
+                if(smallestCountryId == destinationCountryId) { // if the next route takes us to our destination, we add the new route and break.
+                    routes.add(new Route(currrentCountryId, smallestCountryId, routes.get(routes.size()-1).distanceSoFar+smallestBorderDist));
+                    // For distance, consider the distance from the last route along with the distance of this current smallestBorderDist.
+                    break;
+                }
+                else {
+                    routes.add(new Route(currrentCountryId, smallestCountryId, routes.get(routes.size()-1).distanceSoFar+smallestBorderDist)); // Add the route normally.
+                    currrentCountryId = smallestCountryId; // Set the current country to the next.
+                    unvisitedStatesId = new ArrayList<Integer>(); // Clear unvisited states...
+                    
+                    for(int i = 0; i < graph.getStateHash(currrentCountryId).getBorderSize(); i++) { // Adds all of the new bordering states to the unvisited.
+                        unvisitedStatesId.add(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId());
+                    }
+                }
+            }
+            else { // We've visited all of the states, so we break.
+                break;
+            }
+        }
         return null;
     }
 
