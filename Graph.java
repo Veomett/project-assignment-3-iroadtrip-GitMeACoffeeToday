@@ -12,9 +12,7 @@ public class Graph {
 	HashMap<String, Integer> nameExceptions = new HashMap<String, Integer>();
 	
 	
-	public Graph() {
-		
-	}
+	public Graph() {}
 	
 	/*
 	 * Appends a state to the graph.
@@ -25,17 +23,22 @@ public class Graph {
 	}
 	
 	public Integer getStateHashId(String key) {
-		if(nameExceptions.get(key) != null) {
+		if(nameExceptions.get(key) != null) { // If it is one of the exceptions...
 			return nameExceptions.get(key);
 		}
 		else {
-			return -1;
+			if(findStateIndex(key) != -1) {
+				return states.get(findStateIndex(key)).getId();
+			}
+			else {
+				return -1;
+			}
 		}
 	}
 	
+	
 	public int findStateIndex(String stateName) {
 		int stateIndex = 0;
-		
 		
 		if(nameExceptions.get(stateName) != null) { // If the exception exists.. we check one last time.
 			
