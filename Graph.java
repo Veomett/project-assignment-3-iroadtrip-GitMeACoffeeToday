@@ -1,5 +1,3 @@
-package proj3;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -43,7 +41,6 @@ public class Graph {
 		if(nameExceptions.get(stateName) != null) { // If the exception exists.. we check one last time.
 			
 			for(State e: states) { // We always start with the first state object.
-				// nameExceptions.get(stateName)
 				if(e.nameMatchInList(getStateHash(nameExceptions.get(stateName)).getOfficialName())) {
 					return stateIndex;
 				}
@@ -62,8 +59,6 @@ public class Graph {
 				}
 			}
 		}
-		
-		//System.out.println(stateName);
 		return -1; // returns -1 by default
 	}
 	
@@ -80,23 +75,22 @@ public class Graph {
 	}
 	
 	
-	// TESTING.
-	public State returnFirstStateTest() {
-		return states.get(0);
-	}
-	
-	
 	public void exceptionHandling() {		
 		nameExceptions.put("Burkina Faso", 439);
 		nameExceptions.put("Bosnia and Herzegovina", 346);
+		nameExceptions.put("bosnia and herzegovina", 346);
 		nameExceptions.put("Romania", 360);
+		nameExceptions.put("romania", 360);
 		nameExceptions.put("Democratic Republic of the Congo", 490);
 		nameExceptions.put("Republic of the Congo", 484);
-		nameExceptions.put("US", 2);
-		nameExceptions.put("North Korea", 731);
-		nameExceptions.put("Kyrgyzstan", 703);
 		nameExceptions.put("Congo, Democratic Republic of the", 490);
 		nameExceptions.put("Congo, Republic of the", 484);
+		nameExceptions.put("US", 2);
+		nameExceptions.put("us", 2);
+		nameExceptions.put("United States", 2);
+		nameExceptions.put("united states", 2);
+		nameExceptions.put("North Korea", 731);
+		nameExceptions.put("Kyrgyzstan", 703);
 		nameExceptions.put("Cote d'Ivoire", 437);
 		nameExceptions.put("Czechia", 316);
 		nameExceptions.put("Germany", 260);
@@ -105,10 +99,14 @@ public class Graph {
 		nameExceptions.put("Holy See (Vatican City)", 325);
 		nameExceptions.put("Timor-Leste", 860);
 		nameExceptions.put("UK", 200);
+		nameExceptions.put("uk", 200);
 		nameExceptions.put("Korea, North", 731);
+		nameExceptions.put("North Korea", 731);
 		nameExceptions.put("Vietnam", 816);
+		nameExceptions.put("North Vietnam", 816);
 		nameExceptions.put("Macau", 710);
 		nameExceptions.put("UAE", 696);
-		nameExceptions.put("United States", 2);
+		nameExceptions.put("Turkey (Turkiye)", 640);
+		nameExceptions.put("Turkiye", 640);
 	}
 }

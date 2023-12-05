@@ -1,10 +1,8 @@
-package proj3;
-
 public class Border {
 	
 	State borderingState;
 	
-	int distance;
+	int distance = -1;
 	
 	
 	public Border(State state) {

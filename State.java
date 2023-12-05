@@ -1,5 +1,3 @@
-package proj3;
-
 import java.util.ArrayList;
 
 public class State {
@@ -8,7 +6,7 @@ public class State {
 	
 	String code;
 	
-	ArrayList<String> namesList = new ArrayList<String>(); // Index 0 is the 'official name'.
+	ArrayList<String> namesList = new ArrayList<String>(); // Index 0 is the 'official name'. Alias'
 	
 	ArrayList<Border> borders = new ArrayList<Border>();// Contains all borders that border this node.
 	
@@ -18,8 +16,6 @@ public class State {
 		this.code = code;
 		
 	}
-	
-	
 	
 	// Getters / Setters
 	public int getId() {
@@ -34,6 +30,10 @@ public class State {
 		return namesList.get(0);
 	}
 	
+	public boolean isThereBordering() {
+		return borders.isEmpty();
+	}
+	
 	public Border getBorderState(int index) {
 		if(borders.size() != 0) {
 			return borders.get(index);
@@ -41,6 +41,19 @@ public class State {
 		else {
 			return null;
 		}
+	}
+	
+	public int findBorderStateDistance(State state) { // Returns the distance of the border..
+		for(Border b: borders) {
+			if(b.getState().getId() == state.getId()) {
+				return b.getDistance();
+			}
+		}
+		return -1;
+	}
+	
+	public int getBorderSize() {
+		return borders.size();
 	}
 	
 	// Add to the Arraylist namesList.
@@ -56,7 +69,6 @@ public class State {
 	public boolean nameMatchInList(String nameToBeMatched) {
 		for(String e: namesList) {
 			if(e.toLowerCase().equals(nameToBeMatched.toLowerCase())) {
-				
 				return true; // Return true if the name is within the list. 
 			}
 		}

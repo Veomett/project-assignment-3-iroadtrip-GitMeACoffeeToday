@@ -1,5 +1,3 @@
-package proj3;
-
 public class Route {
 	
 	int prevStateID;
@@ -16,5 +14,23 @@ public class Route {
 		
 		distanceSoFar += currDistance;
 	}
+	
+	public int getPrevStateID() {
+		return prevStateID;
+	}
+	public int getCurrStateID() {
+		return currStateID;
+	}
+	
+	
+	public int getDistanceSoFar() {
+		return distanceSoFar;
+	}
+	
+	public void setPrevStateID(int stateID) {
+		prevStateID = stateID;
+	}
+	public void setDistanceSoFar(int distance) {
+		distanceSoFar = distance;
+	}
 }
-
