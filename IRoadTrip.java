@@ -15,7 +15,6 @@ public class IRoadTrip {
      * Other lines of data in state_name.tsv that end with older or different dates are ignored.
      */
     static String DATE = "2020-12-31";
-    
     Graph graph = new Graph();
     
     /**
@@ -44,19 +43,20 @@ public class IRoadTrip {
         if(graph.findStateIndex(country1) == -1 || (graph.findStateIndex(country2) == -1)) { // If either of the two countries are invalid country names..
             return -1;
         }
-        else if(graph.findStateIndex(country1) == graph.findStateIndex(country2)) {
+        else if(graph.findStateIndex(country1) == graph.findStateIndex(country2)) { // If both countries are the same, we return 0.
             return 0;
         }
-        else {
+        else { // We have two countries which are valid and not the same, we call findPath to get the distance (path-wise) between them.
             List<String> path = findPath(country1, country2);
             if(path.isEmpty()) { // If the country names were valid, yet no path existed between them, return -1.
                 return -1;
             }
-            else {
+            else { // We loop through the returned list and calculate the total distance.
                 int totalDist = 0;
                 for(String p: path) {
-                    System.out.println(p.split("-->")[1].substring(p.split("-->")[1].indexOf("(")+1, p.split("-->")[1].indexOf(")")));
-                    totalDist += Integer.parseInt(p.split("-->")[1].substring(p.split("-->")[1].indexOf("(")+1, p.split("-->")[1].indexOf("k")-1));
+                    String splitString = p.split("-->")[1].substring(p.split("-->")[1].indexOf("(")+1, p.split("-->")[1].indexOf(")"));
+                    splitString = splitString.split(" ")[0]; // Split again to be left with only the number.
+                    totalDist += Integer.parseInt(splitString);
                 }
                 return totalDist;
             }
@@ -67,203 +67,225 @@ public class IRoadTrip {
      * findPath uses a modified version of Diijstrka's Algorithm, the primary change being that it terminates once a path to the destination country,
      * country 2, is found. Other than that and a few other minor changes, findPath follows the general rules and patterns of the original algorithm.
      * 
+     * findPath works with four things, a list of visitedStates codes, unvisitedStates codes, a hashmap of routes, and an initial case for the starting country.
+     * A route is essentially an edge between two nodes, or more specifically, a path that leads to a certain destination (country). A country only has one valid route to it and
+     * that route, at the end of the algorithm, is assured to be the shortest / most-efficient path. 
+     * 
+     * Each route has a 'weight' that grows depending on the previous route that 'led' to it. We use this weight to determine when we update our routes weights and previous nodes.
+     * (i.e. we have this route with this weight initially from one place to another, but then another 'new route' that leads to the same destination, yet has a shorter weight overall,
+     * replaces this route by updating it with the better previous country and distance.
+     * 
+     * Every time we visit a country, we add it to our list visited state codes, first loop through all of the bordering countries of the current country, creating routes to them
+     * if they don't already exist, or updating them if necessary. Secondly, we loop through the bordering countries again and decide which one to go to. We only visit countries that are not
+     * included in the visitedStatesCode list (i.e. we don't visit the ones we visited already). This algorithm is greedy, so out of all of the bordering countries that are unvisited, we only 
+     * consider the one with the 'shortest path'.
+     * 
+     * If it is the case that we don't manage to find a path to a bordering country, we will have run into a 'dead end' and must backtrack. Thus we return to the previously visited country and
+     * repeat the same prior process, but this time with an updated visited states list that will exclude states we have already visited (we won't go back to those).
+     * 
+     * Each time we move on or go back, we clear our unvisitedStatesCode list (which only contains the bordering countries for a particular current country) and repopulate it with the presently 
+     * bordering countries for the country we go to.
+     * NOTE that we don't consider bordering countries that have a distance of -1. This is to account for countries that did not have valid data entries in borders.txt, like Kosovo. A border with
+     * a negative edge distance is useless to us and can even break the program.
+     * 
+     * 
      * A hash map is used to store the Route objects that are created or updated as needed when we visit or return to a country.
-     * @param country1
-     * @param country2
-     * @return
+     * @param country1 Starting country name
+     * @param country2 Destination country name
+     * @return A List (Empty if no path)
      */
     public List<String> findPath (String country1, String country2) { // Return a list containing the path from one country to another.
-        // First put source country ID into visited states as we start off with it.
+        // First put source country code into visited states as we start off with it.
         // Then from the source country, we put the ids of all of its neighbooring states into the unvisited (bordersList).
             // Of the unvisited states, we choose the one with the shortest border distance and move it into the visited. (Create a new Route and place it into the route list).
         
-        ArrayList<Integer> visitedStatesId = new ArrayList<Integer>();
-        ArrayList<Integer> unvisitedStatesId = new ArrayList<Integer>();
+        ArrayList<String> visitedStatesCode = new ArrayList<String>();
+        ArrayList<String> unvisitedStatesCode = new ArrayList<String>();
                 
-        HashMap<Integer, Route> hashRoutes = new HashMap<Integer, Route>();
+        HashMap<String, Route> hashRoutes = new HashMap<String, Route>();
         
-        
+        // These two entries keep track of the 'next' bordering country with the shortest path, if there is one. 
+        // If there isn't, smallestBorderDist remains -1 to indicate so.
         int smallestBorderDist = -1;
-        int smallestCountryId;
+        String smallestCountryCode; 
         
-        int currrentCountryId = graph.getStateHash(graph.getStateHashId(country1)).getId(); // Declares and sets the current id of the country to be the source country (starting).
-        int destinationCountryId = graph.getStateHash(graph.getStateHashId(country2)).getId();
+        String currentCountryCode = graph.getStateHash(graph.getStateHashCode(country1)).getCode(); // Declares and sets the current code of the country to be the source country (starting).
+        String destinationCountryId = graph.getStateHash(graph.getStateHashCode(country2)).getCode();
                 
         
-        for(int i = 0; i < graph.getStateHash(graph.getStateHashId(country1)).getBorderSize(); i++) { // Adds all bordering states to the unvisited.
-            unvisitedStatesId.add(graph.getStateHash(graph.getStateHashId(country1)).getBorderState(i).getState().getId());
+        for(int i = 0; i < graph.getStateHash(graph.getStateHashCode(country1)).getBorderSize(); i++) { // Adds all bordering states to the unvisited.
+            if(graph.getStateHash(graph.getStateHashCode(country1)).getBorderState(i).getDistance() != -1) { // If the border has a valid distance, we consider it. Otherwise we pass over it.
+                unvisitedStatesCode.add(graph.getStateHash(graph.getStateHashCode(country1)).getBorderState(i).getState().getCode());
+            }
         }
         
         
-        visitedStatesId.add(graph.getStateHash(graph.getStateHashId(country1)).getId());
-        hashRoutes.put(graph.getStateHash(graph.getStateHashId(country1)).getId(), new Route(-1, graph.getStateHash(graph.getStateHashId(country1)).getId(), 0));
+        visitedStatesCode.add(graph.getStateHash(graph.getStateHashCode(country1)).getCode());
+        hashRoutes.put(graph.getStateHash(graph.getStateHashCode(country1)).getCode(), new Route("HEAD", graph.getStateHash(graph.getStateHashCode(country1)).getCode(), 0));
         // Create source route...
         
-        for(int i = 0; i < graph.getStateHash(graph.getStateHashId(country1)).getBorderSize(); i++) { // Initially adds all bordering state routes to the hashmap.
-            hashRoutes.put(graph.getStateHash(graph.getStateHashId(country1)).getBorderState(i).getState().getId(), 
-                    
-                    new Route(graph.getStateHash(graph.getStateHashId(country1)).getId(), 
-                            graph.getStateHash(graph.getStateHashId(country1)).getBorderState(i).getState().getId(), 
-                            graph.getStateHash(graph.getStateHashId(country1)).getBorderState(i).getDistance()));
-        } // Previous is source state, current is country1 ID, distance is 0.
-        
-        
-        // Either the unvisited states id list is empty or the next new route ends with the destination.
-        while(!unvisitedStatesId.isEmpty()) { // While there are adjacent states to check...
-            if(!visitedStatesId.contains(currrentCountryId)) { // If the current country has not been visited, we add it to the visited as we are now at said country.
-                visitedStatesId.add(currrentCountryId);
+        for(int i = 0; i < graph.getStateHash(graph.getStateHashCode(country1)).getBorderSize(); i++) { // Initially adds all bordering state routes to the hashmap.
+            if((graph.getStateHash(graph.getStateHashCode(country1)).getBorderState(i).distance != -1)) { // If the border has distance, we ingore it..
+                hashRoutes.put(graph.getStateHash(graph.getStateHashCode(country1)).getBorderState(i).getState().getCode(), 
+                        
+                        new Route(graph.getStateHash(graph.getStateHashCode(country1)).getCode(), 
+                                graph.getStateHash(graph.getStateHashCode(country1)).getBorderState(i).getState().getCode(), 
+                                graph.getStateHash(graph.getStateHashCode(country1)).getBorderState(i).getDistance()));
             }
+        } // Previous is source state, current is country1 code, distance is 0.
+        
             
-            
-            
-            /*
-            for(int d: visitedStatesId) {
-                System.out.println(graph.getStateHash(d).getOfficialName());
+        // Either the unvisited states code list is empty or the next new route ends with the destination.
+        // We loop until we truly run out of countries to visit. (Have to fully explore all bordering countries to explore all possible routes to obtain the shortest and most efficient)
+        while(!unvisitedStatesCode.isEmpty()) { // While there are adjacent states to check...
+            if(!visitedStatesCode.contains(currentCountryCode)) { // If the current country has not been visited, we add it to the visited as we are now at said country.
+                visitedStatesCode.add(currentCountryCode);
             }
-            System.out.println();*/
             
                         
-            for(int i = 0; i < graph.getStateHash(currrentCountryId).getBorderSize(); i++) { // Initially adds all bordering state routes to the hashmap if a route doesn't exist already.
-                if(hashRoutes.get(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId()) == null) { // If there isn't a path already leading to the border country, we create and add a new one.
-                    hashRoutes.put(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId(), 
-                            new Route(graph.getStateHash(currrentCountryId).getId(), 
-                                    
-                                    graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId(), 
-                                    
-                                    graph.getStateHash(currrentCountryId).getBorderState(i).getDistance() + 
-                                    hashRoutes.get(graph.getStateHash(currrentCountryId).getId()).getDistanceSoFar()));
+            for(int i = 0; i < graph.getStateHash(currentCountryCode).getBorderSize(); i++) { // Initially adds all bordering state routes to the hashmap if a route doesn't exist already.
+                
+                if(hashRoutes.get(graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode()) == null) { // If there isn't a path already leading to the border country, we create and add a new one.
                     
+                    if(graph.getStateHash(currentCountryCode).getBorderState(i).getDistance() != -1) {
+                        hashRoutes.put(graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode(), 
+                                new Route(graph.getStateHash(currentCountryCode).getCode(), 
+                                        
+                                        graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode(), 
+                                        
+                                        graph.getStateHash(currentCountryCode).getBorderState(i).getDistance() + 
+                                        hashRoutes.get(graph.getStateHash(currentCountryCode).getCode()).getDistanceSoFar()));
+                    }
                 } // Add a new key-value pair to hashroutes that contains the route leading to the said border country.
                 
                 else { // Previous route found, compare distances and update if needed.
-                    //System.out.println(hashRoutes.get(graph.getStateHash(currrentCountryId).getId()));
-                    //System.out.println(graph.getStateHash(currrentCountryId).getId());
-                    if((graph.getStateHash(currrentCountryId).getBorderState(i).getDistance() + 
-                            hashRoutes.get(graph.getStateHash(currrentCountryId).getId()).getDistanceSoFar()) 
+                    
+                    if((graph.getStateHash(currentCountryCode).getBorderState(i).getDistance() + 
+                            hashRoutes.get(graph.getStateHash(currentCountryCode).getCode()).getDistanceSoFar()) 
                             
-                            < hashRoutes.get(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId()).getDistanceSoFar()) {
+                            < hashRoutes.get(graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode()).getDistanceSoFar()) {
                         // If the current border's edge weight + the previous state's distanceSoFar so far is LESS THAN the total distanceSoFar found in the current route, we update.
 
-                        hashRoutes.get(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId()).setPrevStateID(
-                                graph.getStateHash(currrentCountryId).getId());
+                        hashRoutes.get(graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode()).setPrevStateCode(
+                                graph.getStateHash(currentCountryCode).getCode());
                         
                         
-                        hashRoutes.get(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId()).setDistanceSoFar(
-                                graph.getStateHash(currrentCountryId).getBorderState(i).getDistance() + 
-                            hashRoutes.get(graph.getStateHash(currrentCountryId).getId()).getDistanceSoFar());
+                        hashRoutes.get(graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode()).setDistanceSoFar(
+                                graph.getStateHash(currentCountryCode).getBorderState(i).getDistance() + 
+                            hashRoutes.get(graph.getStateHash(currentCountryCode).getCode()).getDistanceSoFar());
                     }
                 }
             }
             
-            if(currrentCountryId == -1) { // We backed up to the source country, meaning there is no path. Break.
+            if(currentCountryCode.equals("HEAD")) { // We backed up to the source country, meaning there is no path. Break.
                 break;
             }
             
             smallestBorderDist = -1;
-            smallestCountryId = -1;
+            smallestCountryCode = null;
             
-            System.out.println("VISITED STATES: ");
-            for(int e: visitedStatesId) {
-                System.out.println(graph.getStateHash(e).getOfficialName());
-            }
-            System.out.println();
-            
-           
-            System.out.println("CURRENT BORDER STATES: " + unvisitedStatesId.size());
-            for(int i = 0; i < unvisitedStatesId.size(); i++) { // From the list of unvisitedStates, i.e. bordering states...
-                
-                System.out.println(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getOfficialName());
-                
-                if(!visitedStatesId.contains(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId())) { // If the border hasn't been visited already...
+            for(int i = 0; i < unvisitedStatesCode.size(); i++) { // From the list of unvisitedStates, i.e. bordering states...
+
+                if(!visitedStatesCode.contains(graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode()) &&
+                        graph.getStateHash(currentCountryCode).getBorderState(i).getDistance() != -1) { // If the border hasn't been visited already and has a valid distance..
                     // We only consider the adjancent states that have not been visited yet...
                     if(smallestBorderDist == -1) { // Base case, we have no data yet.
-                        smallestBorderDist = graph.getStateHash(currrentCountryId).getBorderState(i).getDistance();
-                        smallestCountryId = graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId();
+                        smallestBorderDist = graph.getStateHash(currentCountryCode).getBorderState(i).getDistance();
+                        smallestCountryCode = graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode();
                     }
+                    
                     else {
-                        if(smallestBorderDist > graph.getStateHash(currrentCountryId).getBorderState(i).getDistance()) {
-                            smallestBorderDist = graph.getStateHash(currrentCountryId).getBorderState(i).getDistance();
-                            smallestCountryId = graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId();
+                        if(smallestBorderDist > graph.getStateHash(currentCountryCode).getBorderState(i).getDistance()) {
+                            smallestBorderDist = graph.getStateHash(currentCountryCode).getBorderState(i).getDistance();
+                            smallestCountryCode = graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode();
                         }
                     }
                 }
             }
-            System.out.println("NEXT COUNTRY: " + smallestCountryId);
-            System.out.println("NEXT COUNTRY DIST.: " + smallestBorderDist);
-            
-            System.out.println();
             
             
             if(smallestBorderDist != -1) { // If the shortest and unvisited border has been found...
-                System.out.println("CASE 1");
-                if(smallestCountryId == destinationCountryId) { // if the next route takes us to our destination, we add the new route and break.
-                    // For distance, consider the distance from the last route along with the distance of this current smallestBorderDist.
-                    break; // Destination reached!
-                }
-                else {
-                    System.out.println("BEFORE: "+graph.getStateHash(currrentCountryId).getOfficialName());
-                    currrentCountryId = smallestCountryId; // Set the current country to the next.
-                    System.out.println("AFTER: " +graph.getStateHash(currrentCountryId).getOfficialName());
-                    System.out.println("--------------------------------");
+
+                if(smallestCountryCode == destinationCountryId) { // if the next route takes us to our destination, we add the new route and break.
                     
-                    unvisitedStatesId = new ArrayList<Integer>(); // Clear unvisited states...
-                    for(int i = 0; i < graph.getStateHash(currrentCountryId).getBorderSize(); i++) { // Adds all of the new bordering states to the unvisited
-                        unvisitedStatesId.add(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId());
+                    if(visitedStatesCode.indexOf(currentCountryCode)-1 != -1) {
+                        currentCountryCode = visitedStatesCode.get(visitedStatesCode.indexOf(currentCountryCode)-1);
+                        
+                        unvisitedStatesCode = new ArrayList<String>(); // Clear unvisited states...
+                        
+                        for(int i = 0; i < graph.getStateHash(currentCountryCode).getBorderSize(); i++) { // Adds all of the new bordering states to the unvisited, assuming they have a valid distance.
+                            if(graph.getStateHash(currentCountryCode).getBorderState(i).getDistance() != -1) {
+                                unvisitedStatesCode.add(graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode());
+                            }
+                        }
+                    }
+                    
+                    else {
+                        break; // Destination reached!
+                    }
+                }
+                
+                else {
+                    currentCountryCode = smallestCountryCode; // Set the current country to the next.
+                    
+                    unvisitedStatesCode = new ArrayList<String>(); // Clear unvisited states...
+                    for(int i = 0; i < graph.getStateHash(currentCountryCode).getBorderSize(); i++) { // Adds all of the new bordering states to the unvisited
+                        if(graph.getStateHash(currentCountryCode).getBorderState(i).distance != -1) { // Must have a valid distance...
+                            unvisitedStatesCode.add(graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode());
+                        }
                     }
                 }
             }
             
             else { // We have no borders (unvisited) to go to. (Dead end)
-                System.out.println("CASE 2");
-                currrentCountryId = hashRoutes.get(currrentCountryId).getPrevStateID();
-                if(currrentCountryId == -1) { // We end up back at the source country after attempting to pathfind to the destination..
-                    System.out.println("Returned to source..");
+                if(currentCountryCode.equals(graph.getStateHash(graph.getStateHashCode(country1)).getCode())) { // We end up back at the source country after attempting to pathfind to the destination..
+                    visitedStatesCode.add(graph.getStateHash(graph.getStateHashCode(country1)).getCode()); // Add destination to the visited.
                     break;
                 }
-                System.out.println("BACKING UP TO " + graph.getStateHash(currrentCountryId).getOfficialName());
-                System.out.println();
                 
-                unvisitedStatesId = new ArrayList<Integer>(); // Clear unvisited states...
-                for(int i = 0; i < graph.getStateHash(currrentCountryId).getBorderSize(); i++) { // Adds all of the new bordering states to the unvisited.
-                    
-                    
-                    unvisitedStatesId.add(graph.getStateHash(currrentCountryId).getBorderState(i).getState().getId());
+                currentCountryCode = visitedStatesCode.get(visitedStatesCode.indexOf(currentCountryCode)-1);
+                
+                unvisitedStatesCode = new ArrayList<String>(); // Clear unvisited states...
+                for(int i = 0; i < graph.getStateHash(currentCountryCode).getBorderSize(); i++) { // Adds all of the new bordering states to the unvisited, assuming they have a valid distance.
+                    if(graph.getStateHash(currentCountryCode).getBorderState(i).getDistance() != -1) {
+                        unvisitedStatesCode.add(graph.getStateHash(currentCountryCode).getBorderState(i).getState().getCode());
+                    }
                 }
             }
         }
         
         
         
-        
-        
-        if(hashRoutes.get(graph.getStateHashId(country2)) == null) { // We were unable to reach the destination.
+        if(hashRoutes.get(graph.getStateHashCode(country2)) == null) { // We were unable to reach the destination, thus indicated by our routes list not having a path to the destination.
             return new ArrayList<String>();
         }
         
-        else {
+        else { // We were able to find a path, and now we process our routes for it, working backwards from the route to the destination to its starting point.
             ArrayList<String> finalizedPath = new ArrayList<String>();
             
-            int prevCountry = hashRoutes.get(graph.getStateHashId(country2)).getCurrStateID();
+            String prevCountry = hashRoutes.get(graph.getStateHashCode(country2)).getCurrStateCode();
             
-            while(prevCountry != -1) {
-                //System.out.println();
-                //System.out.println(graph.getStateHash(prevCountry).getOfficialName());
-                if(hashRoutes.get(prevCountry).getPrevStateID() != -1) {
-                    finalizedPath.add(0, graph.getStateHash(hashRoutes.get(prevCountry).getPrevStateID()).getOfficialName() 
+            while(!prevCountry.equals("HEAD")) {
+                if(!(hashRoutes.get(prevCountry).getPrevStateCode()).equals("HEAD")) {
+                    finalizedPath.add(0, graph.getStateHash(hashRoutes.get(prevCountry).getPrevStateCode()).getOfficialName() 
                             + " --> " 
                             + graph.getStateHash(prevCountry).getOfficialName()
                             + " ("
-                            + graph.getStateHash(hashRoutes.get(prevCountry).getPrevStateID()).findBorderStateDistance(graph.getStateHash(prevCountry))
+                            + graph.getStateHash(hashRoutes.get(prevCountry).getPrevStateCode()).findBorderStateDistance(graph.getStateHash(prevCountry))
                             + " km.)"
                             );
                 }
-                prevCountry = hashRoutes.get(prevCountry).getPrevStateID();
+                prevCountry = hashRoutes.get(prevCountry).getPrevStateCode();
             }
             return finalizedPath;
         }
     }
 
-
+    /**
+     * Accepts the user input and loops until given the termination command by the user.
+     * Responsible for printing out the output afterwards. 
+     * Prints out both the path and the total distance (via path) from the source to the destination.
+     */
     public void acceptUserInput() {
        Scanner scanner = new Scanner(System.in);
        
@@ -308,6 +330,7 @@ public class IRoadTrip {
            System.out.print("To continue, press ENTER. To exit, type EXIT: ");
            String input = scanner.nextLine();
            if(input.toLowerCase().equals("exit")) {
+               System.out.println("Good Bye!    Do Widzenia!    مع السلامة! Viszontlátásra!");
                break;
            }
            System.out.println();
@@ -316,38 +339,31 @@ public class IRoadTrip {
     }
 
 
-    // testing...
+    // For testing...
     public static void main(String[] args) throws IOException {
-        
-        
-        Graph testGraph = new Graph();
-        testGraph.exceptionHandling();
-        parseFiles(testGraph, "state_name.tsv", "borders.txt", "capdist.csv");
-        
-                
-        //System.out.println(testGraph.getStateHash(testGraph.getStateHashId("China")).getBorderState(14).getState().getOfficialName());
-        
-        
        IRoadTrip a3 = new IRoadTrip(args);
-       //List<String> array = a3.findPath("Germany", "Argentina");
-       List<String> array = a3.findPath("Ukraine", "France");
-       
-       for(String a: array) {
-           System.out.println(a);
-       }
-       
-       //a3.acceptUserInput();
-        
+       a3.acceptUserInput();    
     }
     
-    // Seperate function for processing Strings into data.
     
-    public static void parseFiles(Graph graph, String state_num, String borders, String capDist) throws IOException {
+    /**
+     * parseFiles is responsible for reading all three provided files, parsing their data and recording it in graph. Makes use of the FileReader class.
+     * If the path is not found, by some directory failure, (I encountered this in Eclipse with my project files and data files being in the same package,
+     * paths.get was unable to find the specific location unless I placed it explicitly in the project folder, PLEASE manually obtain the file path from
+     * presumably a properties section for each of the three files and copy and paste it as a String into the other FileReader declaration and initialization
+     * above. (Three parts).
+     * 
+     * @param graph Graph object to recieve data.
+     * @param borders String name of the borders.txt file
+     * @param capDist String name of the capdist.csv file
+     * @param state_nam String name of the dataProblems.txt file
+     * @throws IOException Exception thrown when file was failed to be read / located.
+     */
+    public static void parseFiles(Graph graph, String borders, String capDist, String state_nam) throws IOException {
                 
         // First read state name for the state's name. Create and populate states.
-        
-        //FileReader reader = new FileReader("/Users/michael/eclipse-workspace/CS245Project3/src/proj3/state_name.tsv");
-        FileReader reader = new FileReader(Paths.get(state_num).toAbsolutePath().toString());
+        //FileReader reader = new FileReader(""); BACKUP (Replace with your manual file path)
+        FileReader reader = new FileReader(Paths.get(state_nam).toAbsolutePath().toString());
 
         BufferedReader bufferReader = new BufferedReader(reader);
         String lineReader = bufferReader.readLine();
@@ -361,13 +377,13 @@ public class IRoadTrip {
         
         while(lineReader != null) { // Read the entire state_name.tsv file.
             processedLine = lineReader.split("  "); // Split up the line.
-            stateID = Integer.parseInt(processedLine[0]); // First entry in the line is always the state ID.
+            stateID = Integer.parseInt(processedLine[0]); // First entry in the line is always the state code.
             stateCode = processedLine[1]; // State code is always the second in the line.
             
             if(processedLine[4].equals(DATE)) { // If the information corresponds to the most recent date, we proceed with the creation of a new state.
                 String stateName = "";
                 ArrayList<String> stateAlias = new ArrayList<String>();
-                // Load up the state ID and state CODE.
+                // Load up the state code and state CODE.
                 
                 if(processedLine[2].contains(",") && processedLine[2].contains("(")) { // If there is a comma... and an alias
                     stateName = stateName.concat(processedLine[2].substring(processedLine[2].indexOf(",")+2, processedLine[2].indexOf("("))
@@ -391,13 +407,13 @@ public class IRoadTrip {
                         stateName = stateName.concat(processedLine[2]);
                     }
                 }
+                
+                
                 State newState = new State(stateID, stateCode);
                 
-                //System.out.println("HOST: " + stateName);
                 newState.addToNamesList(stateName); // First add the official state name.
                 
                 for(String a: stateAlias) { // Secondly, add the alias' for the state.
-                    //System.out.println(a);
                     newState.addToNamesList(a);
                 }
                 graph.addToGraph(newState); // Finally, add the state to the graph.
@@ -410,7 +426,7 @@ public class IRoadTrip {
                 
         
         // Now we will read borders.txt
-        //reader = new FileReader("/Users/michael/eclipse-workspace/CS245Project3/src/proj3/borders.txt");
+        //reader = new FileReader(""); BACKUP (Replace with your manual file path)
         reader = new FileReader(Paths.get(borders).toAbsolutePath().toString());
         bufferReader = new BufferedReader(reader);
         lineReader = bufferReader.readLine();
@@ -431,15 +447,7 @@ public class IRoadTrip {
                 lineReader = bufferReader.readLine(); // Read another line...
                 continue;
             }
-            //System.out.println("HOST COUNTRY: " + hostState);
-            /*System.out.println("Borders: " + graph.getState(graph.findStateIndex(hostState)).getBorderSize());
-            if(hostState.equals("South Africa")) {
-                System.out.println(graph.getState(graph.findStateIndex(hostState)).getBorderState(0).getState().getOfficialName());
-                System.out.println(graph.getState(graph.findStateIndex(hostState)).getBorderState(1).getState().getOfficialName());
-            }*/
-            
-            
-            
+
             if(!((processedLine[0].indexOf("=") + 1) == processedLine[0].length()-1)) {
                 int d = 0; // Index location of the = in the subarray of the array created by the split.
                 for(String c: processedLine[0].split(" ")) { // Used to find the location of the '=' character in the array created by the split..
@@ -461,15 +469,12 @@ public class IRoadTrip {
                     }
                     else {
                         concatString = concatString.concat(processedLine[0].split(" ")[a] + " ");
-                        //BorderingState.add(processedLine[0].split(" ")[a]);
                     }
                 }
                 
                             
                 for(int i = 1; i <= processedLine.length-1; i++) {    
-                    for(int a = 0; a < processedLine[i].split(" ").length; a++) {
-                        //System.out.println(processedLine[i].split(" ")[a]);
-                        
+                    for(int a = 0; a < processedLine[i].split(" ").length; a++) {                        
                         if(processedLine[i].split(" ")[a+2].equals("km")) {
                             concatString = concatString.concat(processedLine[i].split(" ")[a]);
                             concatString = concatString.substring(1, concatString.length());
@@ -485,69 +490,21 @@ public class IRoadTrip {
                 
                 
                 
-                for(String e: BorderingState) {
-                    //System.out.println(e);
-                    //System.out.println(graph.getStateHash(710).getBorderSize());
-                    
+                for(String e: BorderingState) {                    
                     // We know the host state is valid as we have checked it at the start of the loop, thus we only need to add our bordering states.
                     // Index (position) of host state, state object.
                     
                     if(graph.findStateIndex(e) != -1) { // If the bordering state is valid...
                         Border newBorder = new Border(graph.getState(graph.findStateIndex(e)));
-                        if(newBorder.getState().getId() == 20) { // Accounting for Denmark's offshore territory, known as GREENLAND.
-                            // We don't consider Denmark's border with Greenland.
+                        
+                        if(graph.getStateHash(graph.getStateHashCode(hostState)).getCode().equals("DEN") 
+                                && newBorder.getState().getCode().equals("CAN")) { // Accounting for Denmark's offshore territory, known as GREENLAND.
+                            //We don't consider Denmark's border with Greenland.
                             continue;
                         }
                         graph.addToStateBorder(graph.findStateIndex(hostState), newBorder);
-                        
-                        //System.out.println("PARENT: " + graph.getState(graph.findStateIndex(hostState)).getOfficialName());
-                        //System.out.println("BORDER: " + newBorder.getState().getOfficialName());
-                        
-                        /*
-                        if(!e.equals(graph.getState(graph.findStateIndex(e)).getOfficialName())) {
-                            
-                            System.out.println("TEST1: " + e);
-                            System.out.println("TEST2: " + graph.getState(graph.findStateIndex(e)).getOfficialName());
-                        }*/
                     }
-
-                    
-                    
-                    /*
-                    if(graph.findStateIndex(hostState) != -1 && graph.findStateIndex(e) != -1) { // If the state exists in the file..
-                        graph.addToStateBorder(graph.findStateIndex(hostState), new Border(graph.getState(graph.findStateIndex(e))));
-                        //System.out.println(graph.getState(graph.findStateIndex(hostState)).getBorderSize());
-                    }
-                    
-                    else if(graph.findStateIndex(hostState) != -1) { // If only the bordering name doesn't match..]
-                        if(graph.getStateHashId(e) != -1) { // If there exists an exception name...
-                            graph.addToStateBorder(graph.findStateIndex(hostState), new Border(graph.getStateHash(graph.getStateHashId(e))));
-                            //System.out.println(graph.getState(graph.findStateIndex(hostState)).getBorderSize());
-                        }
-                    }
-                    
-                    else if(graph.findStateIndex(e) != -1) { // If only the host state name doesn't match..
-                        if(graph.getStateHashId(hostState) != -1) { // If there exists an exception name...
-                            graph.addToStateBorder(graph.findStateIndex(graph.getStateHash(graph.getStateHashId(hostState)).getOfficialName()), 
-                                    new Border(graph.getState(graph.findStateIndex(e))));
-                            //System.out.println(graph.getState(graph.findStateIndex(hostState)).getBorderSize());
-                        }
-                    }
-                    
-                    else { // If both the host and state name doesn't match...
-                        if(graph.getStateHashId(hostState) != -1 && graph.getStateHashId(e) != -1) { // If there exists an exception name for both host and bordering...
-                            graph.addToStateBorder(graph.findStateIndex(hostState), new Border(graph.getStateHash(graph.getStateHashId(e))));
-                            //System.out.println(graph.getState(graph.findStateIndex(hostState)).getBorderSize());
-                        }
-                    }
-                    */
                 }
-                
-                //if(hostState.equals("South Africa")) {
-                //  System.out.println("CUHH");
-                    //System.out.println("TESTING: " + graph.getState(graph.findStateIndex(hostState)).getBorderState(7).getState().getOfficialName());
-                //}
-                //System.out.println();
             }
             lineReader = bufferReader.readLine(); // Read another line...
         }
@@ -559,7 +516,8 @@ public class IRoadTrip {
         
         
         // Now we will read capdist.csv
-        //reader = new FileReader("/Users/michael/eclipse-workspace/CS245Project3/src/proj3/capdist.csv");
+
+        //reader = new FileReader(""); BACKUP (Replace with your manual file path)
         reader = new FileReader(Paths.get(capDist).toAbsolutePath().toString());
         bufferReader = new BufferedReader(reader);
         bufferReader.readLine(); // Skip past the top of the program.
@@ -568,19 +526,18 @@ public class IRoadTrip {
         
         while(lineReader != null) {
             processedLine = lineReader.split(",");
-            //Integer.parseInt(processedLine[0])
             int distanceKm = Integer.parseInt(processedLine[4]);
             
-            int hostStateId = Integer.parseInt(processedLine[0]);
-            int destStateId = Integer.parseInt(processedLine[2]);
+            String hostStateCode = processedLine[1];
+            String destStateCode = processedLine[3];
             
-            if(graph.getStateHash(hostStateId) != null && graph.getStateHash(destStateId) != null) { // Initially, we check if both states exist.
+            if(graph.getStateHash(hostStateCode) != null && graph.getStateHash(destStateCode) != null) { // Initially, we check if both states exist.
                 
-                if(graph.getStateHash(hostStateId).updateBorderDist(destStateId, distanceKm)) { // If the second state shares a border with the host state, we add the edge weight.
+                if(graph.getStateHash(hostStateCode).updateBorderDist(destStateCode, distanceKm)) { // If the second state shares a border with the host state, we add the edge weight.
                     // This statement will only execute if the distance was sucessfully updated.
                     // The host state's border with the destination state has its weight(distance) updated.
                     
-                    graph.getStateHash(destStateId).updateBorderDist(hostStateId, distanceKm);
+                    graph.getStateHash(destStateCode).updateBorderDist(hostStateCode, distanceKm);
                     // The destination state's border with the host state has its weight(distance) updated.
                 }
             }

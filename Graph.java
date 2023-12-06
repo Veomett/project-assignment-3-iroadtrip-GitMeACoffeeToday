@@ -18,13 +18,13 @@ public class Graph {
 	/**
 	 * HashMap of the states. Mostly used by the program itself when determining a path.
 	 */
-	HashMap<Integer, State> idStateMap = new HashMap<Integer, State>();
+	HashMap<String, State> idStateMap = new HashMap<String, State>();
 	
 	/**
 	 * HashMap of state names that may not be initially recognized by the program, due to unusual circumstances and
 	 * discrepancies concerning the borders.txt file's contents.
 	 */
-	HashMap<String, Integer> nameExceptions = new HashMap<String, Integer>();
+	HashMap<String, String> nameExceptions = new HashMap<String, String>();
 	
 	
 	/**
@@ -38,7 +38,7 @@ public class Graph {
 	 */
 	public void addToGraph(State state) {
 		states.add(state);
-		idStateMap.put(state.getId(), state);
+		idStateMap.put(state.getCode(), state);
 	}
 	
 	/**
@@ -48,16 +48,16 @@ public class Graph {
 	 * @param State name
 	 * @return State ID (Hash key)
 	 */
-	public Integer getStateHashId(String key) {
+	public String getStateHashCode(String key) {
 		if(nameExceptions.get(key) != null) { // If it is one of the exceptions...
 			return nameExceptions.get(key);
 		}
 		else {
 			if(findStateIndex(key) != -1) {
-				return states.get(findStateIndex(key)).getId();
+				return states.get(findStateIndex(key)).getCode();
 			}
 			else {
-				return -1;
+				return "NOT-FOUND";
 			}
 		}
 	}
@@ -74,7 +74,6 @@ public class Graph {
 		if(nameExceptions.get(stateName) != null) { // If the exception exists.. we check one last time.
 			
 			for(State e: states) { // We always start with the first state object.
-				// nameExceptions.get(stateName)
 				if(e.nameMatchInList(getStateHash(nameExceptions.get(stateName)).getOfficialName())) {
 					return stateIndex;
 				}
@@ -93,8 +92,6 @@ public class Graph {
 				}
 			}
 		}
-		
-		//System.out.println(stateName);
 		return -1; // returns -1 by default
 	}
 	
@@ -109,10 +106,10 @@ public class Graph {
 	
 	/**
 	 * Returns the State hash value corresponding with the given hash key, the State ID
-	 * @param key State ID
+	 * @param key State code
 	 * @return State object assosiated with hash key.
 	 */
-	public State getStateHash(int key) {
+	public State getStateHash(String key) {
 		return idStateMap.get(key);
 	}
 	
@@ -125,13 +122,6 @@ public class Graph {
 		getState(stateIndex).addToBordersList(newBorder);
 	}
 	
-	
-	// TESTING.
-	public State returnFirstStateTest() {
-		return states.get(0);
-	}
-	
-	
 	/**
 	 * exceptionHandling should always be called on the Graph object at some point, as it provides leeway for state names
 	 * that may be less than conventional (less adhering to what was found in the state_name.tsv file).
@@ -140,47 +130,49 @@ public class Graph {
 	 * state ID, which serves as a hash key to use with the idStateMap hash map.
 	 */
 	public void exceptionHandling() {		
-		nameExceptions.put("Burkina Faso", 439);
-		nameExceptions.put("Bosnia and Herzegovina", 346);
-		nameExceptions.put("bosnia and herzegovina", 346);
+		nameExceptions.put("Burkina Faso", "BFO");
+		nameExceptions.put("Bosnia and Herzegovina", "BOS");
+		nameExceptions.put("bosnia and herzegovina", "BOS");
 		
-		nameExceptions.put("Romania", 360);
-		nameExceptions.put("romania", 360);
+		nameExceptions.put("Romania", "RUM");
+		nameExceptions.put("romania", "RUM");
 		
-		nameExceptions.put("Democratic Republic of the Congo", 490);
-		nameExceptions.put("Republic of the Congo", 484);
-		nameExceptions.put("Congo, Democratic Republic of the", 490);
-		nameExceptions.put("Congo, Republic of the", 484);
+		nameExceptions.put("Democratic Republic of the Congo", "DRC");
+		nameExceptions.put("Republic of the Congo", "CON");
+		nameExceptions.put("Congo, Democratic Republic of the", "DRC");
+		nameExceptions.put("Congo, Republic of the", "CON");
 		
-		nameExceptions.put("US", 2);
-		nameExceptions.put("us", 2);
-		nameExceptions.put("United States", 2);
-		nameExceptions.put("united states", 2);
+		nameExceptions.put("US", "USA");
+		nameExceptions.put("us", "USA");
+		nameExceptions.put("United States", "USA");
+		nameExceptions.put("united states", "USA");
 		
-		nameExceptions.put("Korea, North", 731);
-		nameExceptions.put("north korea", 731);
-		nameExceptions.put("North Korea", 731);
-		nameExceptions.put("Democratic People's Republic of Korea", 731);
+		nameExceptions.put("Korea, North", "PRK");
+		nameExceptions.put("north korea", "PRK");
+		nameExceptions.put("North Korea", "PRK");
+		nameExceptions.put("Democratic People's Republic of Korea", "PRK");
 		
-		nameExceptions.put("Korea, South", 732);
-		nameExceptions.put("South Korea", 732);
-		nameExceptions.put("south korea", 732);
+		nameExceptions.put("Korea, South", "ROK");
+		nameExceptions.put("South Korea", "ROK");
+		nameExceptions.put("south korea", "ROK");
 		
-		nameExceptions.put("Kyrgyzstan", 703);
-		nameExceptions.put("Cote d'Ivoire", 437);
-		nameExceptions.put("Czechia", 316);
-		nameExceptions.put("Germany", 260);
+		nameExceptions.put("Kyrgyzstan", "KYR");
+		nameExceptions.put("Cote d'Ivoire", "CDI");
+		nameExceptions.put("Czechia", "CZR");
+		nameExceptions.put("Germany", "GFR");
 
-		nameExceptions.put("North Macedonia", 343);
-		nameExceptions.put("Timor-Leste", 860);
-		nameExceptions.put("UK", 200);
-		nameExceptions.put("uk", 200);
+		nameExceptions.put("North Macedonia", "MAC");
+		nameExceptions.put("Timor-Leste", "ETM");
+		nameExceptions.put("UK", "UKG");
+		nameExceptions.put("uk", "UKG");
 		
-		nameExceptions.put("Vietnam", 816);
-		nameExceptions.put("North Vietnam", 816);
-		nameExceptions.put("UAE", 696);
+		nameExceptions.put("Vietnam", "DRV");
+		nameExceptions.put("North Vietnam", "DRV");
 		
-		nameExceptions.put("Turkey (Turkiye)", 640);
-		nameExceptions.put("Turkiye", 640);
+		nameExceptions.put("Spain (Ceuta)", "SPN");
+		nameExceptions.put("Morocco (Ceuta)", "MOR");
+		
+		nameExceptions.put("Turkey (Turkiye)", "TUR");
+		nameExceptions.put("Turkiye", "TUR");
 	}
 }

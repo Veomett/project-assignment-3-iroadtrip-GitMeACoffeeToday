@@ -6,22 +6,22 @@
  */
 public class Route {
 	
-	int prevStateID;
+	String prevStateCode;
 	
-	int currStateID;
+	String currStateCode;
 	
 	int distanceSoFar; // Total Weight
 
 	/**
-	 * Creates a new Route object with the ID of the previous state, the ID of the current state, and the distanceSoFar for the particular route ( edge weight ).
-	 * @param prevStateID ID (state number) of the previous state.
-	 * @param currStateID ID (state number) of the current state.
+	 * Creates a new Route object with the code of the previous state, the code of the current state, and the distanceSoFar for the particular route ( edge weight ).
+	 * @param prevStateCode code (state code) of the previous state.
+	 * @param currStateCode code (state code) of the current state.
 	 * @param currDistance The distance so far (accumulative), or edge weight.
 	 */
-	public Route(int prevStateID, int currStateID, int currDistance){
-		this.prevStateID = prevStateID;
+	public Route(String prevStateCode, String currStateCode, int currDistance){
+		this.prevStateCode = prevStateCode;
 		
-		this.currStateID = currStateID;
+		this.currStateCode = currStateCode;
 		
 		distanceSoFar += currDistance;
 	}
@@ -30,16 +30,16 @@ public class Route {
 	 * Returns the previous state ID of this route.
 	 * @return
 	 */
-	public int getPrevStateID() {
-		return prevStateID;
+	public String getPrevStateCode() {
+		return prevStateCode;
 	}
 	
 	/**
-	 * Returns the current state ID of this route.
+	 * Returns the current state code of this route.
 	 * @return
 	 */
-	public int getCurrStateID() {
-		return currStateID;
+	public String getCurrStateCode() {
+		return currStateCode;
 	}
 	
 	/**
@@ -51,11 +51,11 @@ public class Route {
 	}
 	
 	/**
-	 * Sets the ID of the previous state for this route object.
+	 * Sets the Code of the previous state for this route object.
 	 * @param stateID
 	 */
-	public void setPrevStateID(int stateID) {
-		prevStateID = stateID;
+	public void setPrevStateCode(String newStateCode) {
+		prevStateCode = newStateCode;
 	}
 	
 	/**

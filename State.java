@@ -73,7 +73,7 @@ public class State {
 	 */
 	public int findBorderStateDistance(State state) { // Returns the distance of the border..
 		for(Border b: borders) {
-			if(b.getState().getId() == state.getId()) {
+			if(b.getState().getCode().equals(state.getCode())) {
 				return b.getDistance();
 			}
 		}
@@ -128,9 +128,9 @@ public class State {
 	 * @param distance
 	 * @return Boolean values
 	 */
-	public boolean updateBorderDist(int stateID, int distance) { // We should have access to their state ID at this point.
+	public boolean updateBorderDist(String stateCode, int distance) { // We should have access to their state Code at this point.
 		for(Border a: borders) {
-			if(a.getState().getId() == stateID) { // If the state id matches the one found in borders..
+			if(a.getState().getCode().equals(stateCode)) { // If the state code matches the one found in borders..
 				a.setDistance(distance); // Set the distance of the shared border.
 				return true;
 			}
