@@ -188,10 +188,7 @@ public class IRoadTrip {
                     }
                 }
             }
-            //System.out.println("NEXT COUNTRY: " + smallestCountryCode);
-            //System.out.println("NEXT COUNTRY DIST.: " + smallestBorderDist);
-            //System.out.println();
-            
+
             
             if(smallestBorderDist != -1) { // If the shortest and unvisited border has been found...
                 if(smallestCountryCode == destinationCountryId) { // if the next route takes us to our destination, we add the new route and break.
@@ -254,7 +251,7 @@ public class IRoadTrip {
             
             while(!prevCountry.equals("HEAD")) {
                 if(!(hashRoutes.get(prevCountry).getPrevStateCode()).equals("HEAD")) {
-                    finalizedPath.add(0, graph.getStateHash(hashRoutes.get(prevCountry).getPrevStateCode()).getOfficialName() 
+                    finalizedPath.add(0, "* " + graph.getStateHash(hashRoutes.get(prevCountry).getPrevStateCode()).getOfficialName() 
                             + " --> " 
                             + graph.getStateHash(prevCountry).getOfficialName()
                             + " ("
@@ -277,20 +274,37 @@ public class IRoadTrip {
        Scanner scanner = new Scanner(System.in);
        
        while(true) {
-           System.out.print("Starting Country: ");
+           System.out.print("Enter the name of the first country: (type EXIT to quit): ");
            String country1 = scanner.nextLine();
-           while(graph.findStateIndex(country1) == -1) {
-               System.out.println("Invalid starting country name. Please re-enter.");
-               System.out.print("First Country: ");
-               country1 = scanner.nextLine();
+           if(country1.toLowerCase().equals("exit")) {
+               break;
+           }
+           else {
+               while(graph.findStateIndex(country1) == -1) {
+                   System.out.println("Invalid country name. Please enter a valid country name.");
+                   System.out.print("Enter the name of the first country: (type EXIT to quit): ");
+                   country1 = scanner.nextLine();
+                   if(country1.toLowerCase().equals("exit")) {
+                       break;
+                   }
+               }
            }
            
-           System.out.print("Ending Country: ");
+           
+           System.out.print("Enter the name of the second country: (type EXIT to quit): ");
            String country2 = scanner.nextLine();
-           while(graph.findStateIndex(country2) == -1) {
-               System.out.println("Invalid ending country name. Please re-enter.");
-               System.out.print("Second Country: ");
-               country2 = scanner.nextLine();
+           if(country2.toLowerCase().equals("exit")) {
+               break;
+           }
+           else {
+               while(graph.findStateIndex(country2) == -1) {
+                   System.out.println("Invalid country name. Please enter a valid country name.");
+                   System.out.print("Enter the name of the second country: (type EXIT to quit): ");
+                   country2 = scanner.nextLine();
+                   if(country2.toLowerCase().equals("exit")) {
+                       break;
+                   }
+               }
            }
            
            System.out.println();
@@ -311,16 +325,9 @@ public class IRoadTrip {
                    System.out.println(p);
                }
            }
-           
-           System.out.println();
-           System.out.print("To continue, press ENTER. To exit, type EXIT: ");
-           String input = scanner.nextLine();
-           if(input.toLowerCase().equals("exit")) {
-               System.out.println("Good Bye!    Do Widzenia!    مع السلامة! Viszontlátásra!");
-               break;
-           }
            System.out.println();
        }
+       System.out.println("Good Bye!    Do Widzenia!    مع السلامة! Viszontlátásra!");
        scanner.close();
     }
 
